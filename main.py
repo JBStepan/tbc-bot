@@ -1,6 +1,4 @@
 import discord
-from selenium import webdriver
-from time import sleep
 
 bot = discord.Bot()
 
