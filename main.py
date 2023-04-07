@@ -10,4 +10,8 @@ async def on_ready():
 async def ping(ctx: discord.ApplicationContext):
     await ctx.respond("Pong!")
 
+#bot.load_extension('cogs.levels')
+bot.load_extension('cogs.weather')
+
+
 bot.run("")
