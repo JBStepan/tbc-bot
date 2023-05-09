@@ -1,9 +1,30 @@
 
 import discord
 from discord.ext import commands
+from discord.ext import tasks
 import requests
-import os
 
+web_urls = [
+    "https://radar.weather.gov/ridge/standard/KDVN_loop.gif",
+    "https://www.spc.noaa.gov/products/outlook/day1otlk_2000.gif",
+    "https://www.spc.noaa.gov/products/outlook/day1probotlk_2000_torn.gif",
+    "https://www.spc.noaa.gov/products/outlook/day1probotlk_2000_wind.gif",
+    "https://www.spc.noaa.gov/products/outlook/day1probotlk_2000_hail.gif",
+    "https://www.spc.noaa.gov/products/fire_wx/day1otlk_fire.gif",
+    "https://www.wpc.ncep.noaa.gov//noaa/noaa.gif"
+]
+
+file_urls = [
+    "weather/outlook.png",
+    "weather/torn.png",
+    "weather/wind.png",
+    "weather/hail.png",
+    "weather/fire.png",
+    "weather/fronts.png",
+    "weather/radar.gif"
+]
+
+# A class to orginaize all the weather variables 
 class WeatherClass:
     def __init__(self, current_temp: int, humidity: int, condition: str, feelslike: int, condition_img: str, wind: int, pressure: int, visable: int) -> None:
         self.current_temp = current_temp
@@ -38,13 +59,16 @@ async def to_embed(weather: WeatherClass):
     embed.title = "Weather in Iowa City"
     embed.description = f"It is currently {weather.condition}"
 
-    return embed
-    
+    return embed    
 
 class Weather(commands.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
     
+    ##############
+    #  Commands  #
+    ##############
+
     @commands.slash_command()
     async def weather(self, ctx: discord.ApplicationContext):
         weather_json = requests.get(f"http://api.weatherapi.com/v1/forecast.json?key=6e90f3caf7ef4e2eb4a234529211712&q=Iowa City&days=1&aqi=no&alerts=yes").json()
@@ -53,11 +77,32 @@ class Weather(commands.Cog):
 
         await ctx.respond(embeds=[embed])
     
-    @commands.slash_commawnd()
-    async def threat_weather(self, ctx: discord.ApplicationContext):
-        await ctx.respond("https://www.spc.noaa.gov/products/outlook/day1otlk_2000.gif https://www.spc.noaa.gov/products/outlook/day1probotlk_2000_torn.gif https://www.spc.noaa.gov/products/outlook/day1probotlk_2000_wind.gif https://www.spc.noaa.gov/products/outlook/day1probotlk_2000_hail.gif")
+    @commands.slash_command()
+    async def download_weather(self, ctx: discord.ApplicationContext):
+        for url in range(web_urls.__len__()):
+            img_data = requests.get(web_urls[url]).content
+            with open(file_urls[url], "wb") as file:
+                file.write(img_data)
+                
+        await ctx.respond("Done.")
 
+    @commands.slash_command()
+    async def weather_images(self, ctx: discord.ApplicationContext):
+        files = []
+        for i in range(file_urls.__len__()):
+            files.append(discord.File(file_urls[i]))
+        await ctx.respond(files=files)
+    
+    ###########
+    #  Tasks  #
+    ###########
+
+    @tasks.loop(hours=1)
+    async def download_weather_images(self):
+        for url in range(web_urls.__len__()):
+            img_data = requests.get(web_urls[url]).content
+            with open(file_urls[url], "wb") as file:
+                file.write(img_data)
 
 def setup(bot: discord.Bot):
     bot.add_cog(Weather(bot))
-
